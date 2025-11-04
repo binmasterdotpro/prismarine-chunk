@@ -28,6 +28,7 @@ module.exports = (registry) => {
       for (let i = 0; i < sectionCount; i++) { this.sections[i] = new Section() }
       // alloc automatically zero initializes
       this.biome = Buffer.alloc(BIOME_SIZE)
+      this.blockCache = {}
     }
 
     toJson () {
@@ -64,11 +65,19 @@ module.exports = (registry) => {
       }
     }
 
-    getBlock (pos) {
-      const block = new Block(this.getBlockType(pos), this.getBiome(pos), this.getBlockData(pos))
-      block.light = this.getBlockLight(pos)
-      block.skyLight = this.getSkyLight(pos)
-      block.entity = this.getBlockEntity(pos)
+    #hashPosition (pos) {
+        return `${pos.x},${pos.y},${pos.z}`
+    }
+
+    getBlock (pos, extra = false) {
+      const cached = this.blockCache[this.#hashPosition(pos)]
+      const newStateId = this.getBlockStateId(pos)
+      const block = cached && cached.stateId === newStateId ? cached : new Block(this.getBlockType(pos), this.getBiome(pos), this.getBlockData(pos))
+      this.blockCache[this.#hashPosition(pos)] = block
+      if (extra) {
+        block.light = this.getBlockLight(pos)
+        block.skyLight = this.getSkyLight(pos)
+      }
       return block
     }
 
